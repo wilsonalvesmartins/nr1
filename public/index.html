@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CheckUP Empresarial - NR1 & SST</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
+    <style>
+        /* Estilos para animação suave de revelação */
+        .step-hidden {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            transform: translateY(20px);
+        }
+        .step-visible {
+            opacity: 1;
+            height: auto;
+            transform: translateY(0);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Oculta barra de rolagem mas permite scroll */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800 pb-10 flex flex-col">
+
+    <main class="max-w-3xl mx-auto py-10 px-4 w-full flex-grow">
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+            <div class="bg-blue-700 p-8 text-white text-center">
+                <h1 class="text-3xl font-bold">CheckUP de Segurança (NR1)</h1>
+                <p class="mt-2 text-blue-100 text-lg">Descubra possíveis irregularidades no Gerenciamento de Riscos da sua empresa.</p>
+            </div>
+
+            <form id="checkupForm" class="p-4 sm:p-8">
+                <!-- Container onde as perguntas serão injetadas dinamicamente -->
+                <div id="dynamic-form" class="space-y-0"></div>
+
+                <!-- Botão de Submit (Inicia Oculto) -->
+                <div id="submit-section" class="step-hidden pt-8 border-t border-slate-200 mt-8">
+                    <div class="bg-blue-50 p-6 rounded-2xl text-center mb-6">
+                        <h3 class="text-xl font-bold text-blue-900 mb-2">Tudo pronto!</h3>
+                        <p class="text-blue-700">Clique no botão abaixo para analisarmos suas respostas.</p>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl text-xl transition duration-300 shadow-[0_4px_14px_0_rgba(37,99,235,0.39)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)] transform hover:-translate-y-1 flex justify-center items-center gap-3">
+                        Gerar Diagnóstico Gratuito <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Tela de Sucesso -->
+            <div id="sucesso" class="hidden p-10 text-center">
+                <div class="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-5xl">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800 mb-3">CheckUP Concluído!</h2>
+                <p class="text-slate-600 text-lg">Nossa equipe analisará os dados da sua empresa e enviará o relatório completo para o WhatsApp informado.</p>
+                <button onclick="location.reload()" class="mt-8 text-blue-600 hover:text-blue-800 font-semibold hover:underline flex items-center justify-center mx-auto gap-2">
+                    <i class="fas fa-redo"></i> Fazer nova análise
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Cadeado de Acesso Restrito no Rodapé -->
+    <footer class="text-center py-4 mt-auto">
+        <button onclick="acessarPainel()" class="text-slate-300 hover:text-slate-500 transition-colors duration-300" title="Acesso ao Painel">
+            <i class="fas fa-lock text-sm"></i>
+        </button>
+    </footer>
+
+    <script>
+        function acessarPainel() {
+            const senha = prompt("Acesso Restrito. Digite a senha:");
+            if (senha === "wilsonneto") {
+                sessionStorage.setItem('auth_admin', 'wilsonneto');
+                window.location.href = "/painel";
+            } else if (senha !== null && senha !== "") {
+                alert("Senha incorreta!");
+            }
+        }
+
+        // Array com TODAS as perguntas na ordem exata do fluxo
+        const questions = [
+            { isSection: true, title: '1. Dados para o Relatório' },
+            { id: 'nome', type: 'text', label: 'Qual é o seu nome completo?', placeholder: 'Ex: João da Silva' },
+            { id: 'empresa', type: 'text', label: 'Qual o nome da sua empresa?', placeholder: 'Ex: Minha Empresa LTDA' },
+            { id: 'porte', type: 'radio', label: 'Sua empresa é MEI, ME, EPP, etc?', options: ['MEI', 'ME (Microempresa)', 'EPP (Empresa de Pequeno Porte)', 'Médio ou Grande Porte'] },
+            { id: 'telefone', type: 'tel', label: 'Qual o seu WhatsApp para contato?', placeholder: '(00) 00000-0000' },
+            
+            { isSection: true, title: '2. Disposições Gerais e GRO (NR1)' },
+            { id: 'pgr', type: 'radio', label: 'A empresa possui o PGR (Programa de Gerenciamento de Riscos) elaborado e implementado em todos os setores?', options: ['Sim', 'Não', 'Não se aplica'] },
+            { id: 'inventario', type: 'radio', label: 'Existe um Inventário de Riscos Ocupacionais documentado e atualizado?', options: ['Sim', 'Não', 'Não se aplica'] },
+            { id: 'plano_acao', type: 'radio', label: 'A empresa possui um Plano de Ação para mitigar os riscos identificados no PGR?', options: ['Sim', 'Não', 'Não se aplica'] },
+            { id: 'ordem_servico', type: 'radio', label: 'A empresa elabora e assina Ordens de Serviço sobre Segurança e Saúde no Trabalho para os funcionários?', options: ['Sim', 'Não', 'Não se aplica'] },
+            { id: 'treinamento', type: 'radio', label: 'Os trabalhadores recebem treinamento admissional (integração) focado nos riscos da função antes de iniciarem as atividades?', options: ['Sim', 'Não', 'Não se aplica'] },
+            { id: 'atualizacao', type: 'radio', label: 'O PGR foi revisado ou atualizado nos últimos 2 anos (ou após alguma mudança estrutural)?', options: ['Sim', 'Não', 'Não se aplica'] },
+            { id: 'comunicacao', type: 'radio', label: 'Existe um canal ou procedimento para os trabalhadores relatarem riscos aos supervisores de forma segura?', options: ['Sim', 'Não', 'Não se aplica'] },
+            
+            // Perguntas Condicionais (NRs extras)
+            { isSection: true, title: '3. Outras Normas Regulamentadoras', desc: 'Identificamos que precisamos avaliar mais alguns cenários da sua empresa:', isExtra: true },
+            { id: 'nr35', type: 'radio', label: 'NR-35: Há trabalhos realizados a mais de 2 metros de altura?', options: ['Sim', 'Não', 'Não se aplica'], isExtra: true },
+            { id: 'nr33', type: 'radio', label: 'NR-33: Os funcionários entram em silos, tanques, caixas d\'água ou espaços confinados?', options: ['Sim', 'Não', 'Não se aplica'], isExtra: true },
+            { id: 'nr10', type: 'radio', label: 'NR-10: Existem trabalhadores que interagem diretamente com instalações elétricas (eletricistas, manutenção)?', options: ['Sim', 'Não', 'Não se aplica'], isExtra: true },
+            { id: 'nr12', type: 'radio', label: 'NR-12: A empresa utiliza máquinas e equipamentos (ex: prensas, tornos, motosserras, padaria)?', options: ['Sim', 'Não', 'Não se aplica'], isExtra: true },
+            { id: 'nr17', type: 'radio', label: 'NR-17: Há atividades de carregamento de peso, movimentos repetitivos ou trabalho contínuo em computadores (Ergonomia)?', options: ['Sim', 'Não', 'Não se aplica'], isExtra: true }
+        ];
+
+        let extraRevealed = false; // Controle se as NRs extras já foram exibidas
+
+        function initForm() {
+            const container = document.getElementById('dynamic-form');
+            
+            questions.forEach((q, index) => {
+                const div = document.createElement('div');
+                div.id = `step-${index}`;
+                div.className = `step-hidden w-full`; // Inicia oculto
+                
+                if (q.isSection) {
+                    div.innerHTML = `
+                        <div class="mt-10 mb-6 bg-slate-100 border-l-4 border-blue-600 p-5 rounded-r-xl">
+                            <h2 class="text-2xl font-bold text-slate-800"><i class="fas ${index === 0 ? 'fa-user-tie' : (index === 5 ? 'fa-clipboard-check' : 'fa-network-wired')} mr-2 text-blue-600"></i> ${q.title}</h2>
+                            ${q.desc ? `<p class="text-slate-600 mt-2 font-medium">${q.desc}</p>` : ''}
+                        </div>
+                    `;
+                } else if (q.type === 'text' || q.type === 'tel') {
+                    div.innerHTML = `
+                        <div class="bg-white p-6 rounded-2xl border-2 border-slate-100 mb-6 shadow-sm hover:border-blue-100 transition">
+                            <label class="block text-xl font-semibold text-slate-800 mb-4">${q.label}</label>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <input type="${q.type}" name="${q.id}" id="${q.id}" placeholder="${q.placeholder}" class="flex-1 p-4 text-lg bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition" onkeydown="handleEnter(event, ${index})">
+                                <button type="button" onclick="advanceFrom(${index})" class="bg-slate-800 text-white font-bold py-4 px-10 rounded-xl hover:bg-slate-700 transition shadow-md whitespace-nowrap text-lg">OK <i class="fas fa-check ml-2"></i></button>
+                            </div>
+                            <p id="error-${index}" class="text-red-500 font-medium text-sm mt-3 hidden"><i class="fas fa-exclamation-circle mr-1"></i> Por favor, preencha este campo para continuar.</p>
+                        </div>
+                    `;
+                } else if (q.type === 'radio') {
+                    const optionsHtml = q.options.map((opt, optIndex) => `
+                        <label class="cursor-pointer border-2 border-slate-200 rounded-xl p-5 hover:bg-blue-50 hover:border-blue-300 transition flex items-center gap-4 radio-label-${index}">
+                            <input type="radio" name="${q.id}" value="${opt}" class="w-6 h-6 text-blue-600 border-slate-300 focus:ring-blue-500" onchange="handleRadioChange(${index}, this)">
+                            <span class="text-slate-700 font-semibold text-lg">${opt}</span>
+                        </label>
+                    `).join('');
+
+                    div.innerHTML = `
+                        <div class="bg-white p-6 rounded-2xl border-2 border-slate-100 mb-6 shadow-sm">
+                            <label class="block text-xl font-semibold text-slate-800 mb-5">${q.label}</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                ${optionsHtml}
+                            </div>
+                            <p id="error-${index}" class="text-red-500 font-medium text-sm mt-4 hidden"><i class="fas fa-exclamation-circle mr-1"></i> Por favor, selecione uma opção para continuar.</p>
+                        </div>
+                    `;
+                }
+
+                container.appendChild(div);
+            });
+
+            // Mostra o primeiro passo logo que a página carrega
+            revealStep(0);
+        }
+
+        // Se apertar Enter em um campo de texto, avança
+        function handleEnter(e, index) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                advanceFrom(index);
+            }
+        }
+
+        // Ao selecionar um Radio Button, estiliza e avança automaticamente
+        function handleRadioChange(index, radioElement) {
+            const labels = document.querySelectorAll(`.radio-label-${index}`);
+            labels.forEach(lbl => {
+                lbl.classList.remove('border-blue-600', 'bg-blue-50');
+                lbl.classList.add('border-slate-200');
+            });
+            
+            const selectedLabel = radioElement.closest('label');
+            selectedLabel.classList.remove('border-slate-200');
+            selectedLabel.classList.add('border-blue-600', 'bg-blue-50');
+
+            // Timeout suave para dar tempo do usuário ver que clicou
+            setTimeout(() => {
+                advanceFrom(index);
+            }, 350);
+        }
+
+        // Validação e lógica de "Próximo"
+        function advanceFrom(index) {
+            const q = questions[index];
+            const errorEl = document.getElementById(`error-${index}`);
+            
+            // Validação do campo atual
+            if (q.type === 'text' || q.type === 'tel') {
+                const val = document.getElementById(q.id).value.trim();
+                if (!val) {
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+            } else if (q.type === 'radio') {
+                const checked = document.querySelector(`input[name="${q.id}"]:checked`);
+                if (!checked) {
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+            }
+            
+            errorEl.classList.add('hidden'); // Esconde erro se estiver tudo ok
+
+            // Lógica Condicional: Verifica se chegou no fim da NR1 (comunicacao é o index 12)
+            if (index === 12) { 
+                const pgr = document.querySelector('input[name="pgr"]:checked')?.value;
+                const inv = document.querySelector('input[name="inventario"]:checked')?.value;
+                
+                // Se NÃO tem PGR ou NÃO tem Inventário, precisa responder as NRs extras
+                if (pgr === 'Não' || inv === 'Não') {
+                    extraRevealed = true;
+                } else {
+                    // Pula direto para o Submit
+                    revealSubmit();
+                    return;
+                }
+            }
+
+            let nextIndex = index + 1;
+            
+            // Se o próximo for uma pergunta extra, mas as condições não foram atingidas, finaliza
+            if (questions[nextIndex] && questions[nextIndex].isExtra && !extraRevealed) {
+                revealSubmit();
+                return;
+            }
+
+            // Revela a próxima pergunta ou o Submit se acabar
+            if (nextIndex < questions.length) {
+                revealStep(nextIndex);
+            } else {
+                revealSubmit();
+            }
+        }
+
+        // Animação para revelar o passo e rolar a tela
+        function revealStep(index) {
+            const el = document.getElementById(`step-${index}`);
+            if (!el) return;
+
+            if (el.classList.contains('step-hidden')) {
+                el.classList.remove('step-hidden');
+                el.classList.add('step-visible');
+                
+                if (questions[index].isSection) {
+                    // Se for um título de seção, revela imediatamente a pergunta abaixo dele
+                    setTimeout(() => revealStep(index + 1), 50);
+                } else {
+                    // Rola a página suavemente para o novo campo
+                    setTimeout(() => {
+                        const y = el.getBoundingClientRect().top + window.scrollY - 80;
+                        window.scrollTo({ top: y, behavior: 'smooth' });
+                        
+                        // Foca no input se for texto
+                        const input = el.querySelector('input[type="text"], input[type="tel"]');
+                        if (input) input.focus();
+                    }, 100);
+                }
+            }
+        }
+
+        // Revela o botão final
+        function revealSubmit() {
+            const submitEl = document.getElementById('submit-section');
+            if (submitEl.classList.contains('step-hidden')) {
+                submitEl.classList.remove('step-hidden');
+                submitEl.classList.add('step-visible');
+                setTimeout(() => {
+                    submitEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 100);
+            }
+        }
+
+        // Dispara a montagem do formulário
+        initForm();
+
+        // Envio dos dados para o Backend
+        document.getElementById('checkupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            const btnOriginalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analisando dados...';
+            btn.disabled = true;
+
+            const respostas = {};
+            const formData = new FormData(e.target);
+            
+            // Separa os dados principais do restante do questionário (porte vai entrar em respostas)
+            for (let [key, value] of formData.entries()) {
+                if (!['nome', 'empresa', 'telefone'].includes(key)) {
+                    respostas[key] = value;
+                }
+            }
+
+            const payload = {
+                nome: document.getElementById('nome').value,
+                empresa: document.getElementById('empresa').value,
+                telefone: document.getElementById('telefone').value,
+                respostas: respostas
+            };
+
+            try {
+                const response = await fetch('/api/checkup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    document.getElementById('checkupForm').classList.add('hidden');
+                    document.getElementById('sucesso').classList.remove('hidden');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    alert("Erro ao enviar dados. Tente novamente.");
+                    btn.innerHTML = btnOriginalHtml;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Erro de conexão com o servidor.");
+                btn.innerHTML = btnOriginalHtml;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+📄 Arquivo: public/dashboard.html
+
+Dentro da pasta public, crie o arquivo dashboard.html e cole o código abaixo (já com a proteção por senha):
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Leads - CheckUP NR1</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
+</head>
+<body class="bg-slate-100 min-h-screen font-sans hidden" id="body-content">
+
+    <nav class="bg-slate-900 text-white p-4 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold"><i class="fas fa-shield-alt mr-2 text-blue-400"></i> Painel Comercial SST</h1>
+            <button onclick="sair()" class="text-sm bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition"><i class="fas fa-sign-out-alt mr-1"></i> Sair</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-8 px-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-slate-800">Leads Capturados</h2>
+                <button onclick="carregarLeads()" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded transition">
+                    <i class="fas fa-sync-alt mr-1"></i> Atualizar
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
+                            <th class="p-4 border-b">ID</th>
+                            <th class="p-4 border-b">Data</th>
+                            <th class="p-4 border-b">Empresa</th>
+                            <th class="p-4 border-b">Contato</th>
+                            <th class="p-4 border-b text-center">Irregularidades (NR1)</th>
+                            <th class="p-4 border-b">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsTable" class="divide-y divide-slate-100">
+                        <tr><td colspan="6" class="p-8 text-center text-slate-400">Carregando leads...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Detalhes -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
+                <h3 class="text-xl font-bold text-slate-800" id="modalTitle">Detalhes do CheckUP</h3>
+                <button onclick="fecharModal()" class="text-slate-400 hover:text-red-500 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto" id="modalContent">
+                <!-- Conteúdo gerado via JS -->
+            </div>
+            <div class="p-6 border-t bg-slate-50 rounded-b-xl flex justify-end">
+                <button onclick="fecharModal()" class="bg-slate-800 text-white px-6 py-2 rounded-lg hover:bg-slate-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Trava de segurança simples por senha
+        if (sessionStorage.getItem('auth_admin') !== 'wilsonneto') {
+            const senha = prompt("Acesso Restrito. Digite a senha:");
+            if (senha === "wilsonneto") {
+                sessionStorage.setItem('auth_admin', 'wilsonneto');
+                document.getElementById('body-content').classList.remove('hidden');
+                carregarLeads();
+            } else {
+                alert("Acesso negado.");
+                window.location.href = "/";
+            }
+        } else {
+            document.getElementById('body-content').classList.remove('hidden');
+            carregarLeads();
+        }
+
+        function sair() {
+            sessionStorage.removeItem('auth_admin');
+            window.location.href = "/";
+        }
+
+        let leadsAtuais = [];
+
+        async function carregarLeads() {
+            try {
+                const response = await fetch('/api/leads');
+                const leads = await response.json();
+                leadsAtuais = leads;
+                
+                const tbody = document.getElementById('leadsTable');
+                tbody.innerHTML = '';
+
+                if (leads.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500">Nenhum checkup recebido ainda.</td></tr>';
+                    return;
+                }
+
+                leads.forEach(lead => {
+                    const data = new Date(lead.data_criacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+                    
+                    // Conta quantas respostas foram "Não" (indicando problema)
+                    let problemas = 0;
+                    Object.values(lead.respostas).forEach(resp => {
+                        if (resp === 'Não') problemas++;
+                    });
+
+                    let badgeColor = problemas === 0 ? 'bg-green-100 text-green-700' : (problemas < 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700');
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-4 text-slate-500">#${lead.id}</td>
+                        <td class="p-4 text-sm">${data}</td>
+                        <td class="p-4 font-semibold text-slate-800">${lead.empresa}</td>
+                        <td class="p-4">
+                            <div class="text-sm font-medium">${lead.nome}</div>
+                            <div class="text-sm text-slate-500"><i class="fab fa-whatsapp text-green-500"></i> ${lead.telefone}</div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${badgeColor}">${problemas} Não conformidades</span>
+                        </td>
+                        <td class="p-4">
+                            <button onclick="abrirModal(${lead.id})" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded text-sm font-medium transition">Ver Respostas</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar leads", error);
+            }
+        }
+
+        function abrirModal(id) {
+            const lead = leadsAtuais.find(l => l.id === id);
+            if (!lead) return;
+
+            document.getElementById('modalTitle').innerText = `CheckUP: ${lead.empresa}`;
+            
+            let html = `<div class="mb-6 grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
+                <div><span class="text-xs text-slate-500 block uppercase">Contato</span><span class="font-bold">${lead.nome}</span></div>
+                <div><span class="text-xs text-slate-500 block uppercase">WhatsApp</span><span class="font-bold">${lead.telefone}</span></div>
+            </div>`;
+
+            html += `<h4 class="font-bold text-slate-700 mb-3 border-b pb-2">Questionário Respondido</h4><ul class="space-y-3">`;
+            
+            for (const [pergunta, resposta] of Object.entries(lead.respostas)) {
+                let corTexto = resposta === 'Sim' ? 'text-green-600 font-bold' : (resposta === 'Não' ? 'text-red-600 font-bold' : 'text-slate-500');
+                let icone = resposta === 'Sim' ? 'fa-check-circle' : (resposta === 'Não' ? 'fa-times-circle' : 'fa-minus-circle');
+                
+                let lbl = pergunta.toUpperCase().replace('_', ' ');
+
+                html += `
+                    <li class="bg-slate-50 p-3 rounded border border-slate-100 flex justify-between items-center gap-4">
+                        <span class="text-sm text-slate-600 flex-1">${lbl}</span>
+                        <span class="${corTexto} flex items-center gap-1 min-w-[80px] justify-end"><i class="fas ${icone}"></i> ${resposta}</span>
+                    </li>
+                `;
+            }
+            html += `</ul>`;
+
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function fecharModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
