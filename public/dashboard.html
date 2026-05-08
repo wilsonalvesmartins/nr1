@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Leads - CheckUP NR1</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
+    
+    <!-- Links Limpos para Tailwind e FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-slate-100 min-h-screen font-sans hidden" id="body-content">
 
@@ -33,7 +35,7 @@
                             <th class="p-4 border-b">Data</th>
                             <th class="p-4 border-b">Empresa</th>
                             <th class="p-4 border-b">Contato</th>
-                            <th class="p-4 border-b text-center">Irregularidades (NR1)</th>
+                            <th class="p-4 border-b text-center">Irregularidades</th>
                             <th class="p-4 border-b">Ação</th>
                         </tr>
                     </thead>
@@ -45,16 +47,13 @@
         </div>
     </main>
 
-    <!-- Modal de Detalhes -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
-                <h3 class="text-xl font-bold text-slate-800" id="modalTitle">Detalhes do CheckUP</h3>
+                <h3 class="text-xl font-bold text-slate-800" id="modalTitle">Detalhes</h3>
                 <button onclick="fecharModal()" class="text-slate-400 hover:text-red-500 text-2xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto" id="modalContent">
-                <!-- Conteúdo gerado via JS -->
-            </div>
+            <div class="p-6 overflow-y-auto" id="modalContent"></div>
             <div class="p-6 border-t bg-slate-50 rounded-b-xl flex justify-end">
                 <button onclick="fecharModal()" class="bg-slate-800 text-white px-6 py-2 rounded-lg hover:bg-slate-700">Fechar</button>
             </div>
@@ -62,7 +61,7 @@
     </div>
 
     <script>
-        // Trava de segurança simples por senha
+        // Trava de segurança simples
         if (sessionStorage.getItem('auth_admin') !== 'wilsonneto') {
             const senha = prompt("Acesso Restrito. Digite a senha:");
             if (senha === "wilsonneto") {
@@ -95,18 +94,15 @@
                 tbody.innerHTML = '';
 
                 if (leads.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500">Nenhum checkup recebido ainda.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500">Nenhum checkup recebido.</td></tr>';
                     return;
                 }
 
                 leads.forEach(lead => {
                     const data = new Date(lead.data_criacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
                     
-                    // Conta quantas respostas foram "Não" (indicando problema)
                     let problemas = 0;
-                    Object.values(lead.respostas).forEach(resp => {
-                        if (resp === 'Não') problemas++;
-                    });
+                    Object.values(lead.respostas).forEach(resp => { if (resp === 'Não') problemas++; });
 
                     let badgeColor = problemas === 0 ? 'bg-green-100 text-green-700' : (problemas < 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700');
 
@@ -129,9 +125,7 @@
                     `;
                     tbody.appendChild(tr);
                 });
-            } catch (error) {
-                console.error("Erro ao carregar leads", error);
-            }
+            } catch (error) { console.error("Erro", error); }
         }
 
         function abrirModal(id) {
@@ -143,14 +137,11 @@
             let html = `<div class="mb-6 grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
                 <div><span class="text-xs text-slate-500 block uppercase">Contato</span><span class="font-bold">${lead.nome}</span></div>
                 <div><span class="text-xs text-slate-500 block uppercase">WhatsApp</span><span class="font-bold">${lead.telefone}</span></div>
-            </div>`;
-
-            html += `<h4 class="font-bold text-slate-700 mb-3 border-b pb-2">Questionário Respondido</h4><ul class="space-y-3">`;
+            </div><ul class="space-y-3">`;
             
             for (const [pergunta, resposta] of Object.entries(lead.respostas)) {
                 let corTexto = resposta === 'Sim' ? 'text-green-600 font-bold' : (resposta === 'Não' ? 'text-red-600 font-bold' : 'text-slate-500');
                 let icone = resposta === 'Sim' ? 'fa-check-circle' : (resposta === 'Não' ? 'fa-times-circle' : 'fa-minus-circle');
-                
                 let lbl = pergunta.toUpperCase().replace('_', ' ');
 
                 html += `
@@ -166,9 +157,7 @@
             document.getElementById('modal').classList.remove('hidden');
         }
 
-        function fecharModal() {
-            document.getElementById('modal').classList.add('hidden');
-        }
+        function fecharModal() { document.getElementById('modal').classList.add('hidden'); }
     </script>
 </body>
 </html>
