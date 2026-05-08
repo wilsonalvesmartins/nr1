@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Leads - CheckUP NR1</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
+</head>
+<body class="bg-slate-100 min-h-screen font-sans hidden" id="body-content">
+
+    <nav class="bg-slate-900 text-white p-4 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold"><i class="fas fa-shield-alt mr-2 text-blue-400"></i> Painel Comercial SST</h1>
+            <button onclick="sair()" class="text-sm bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition"><i class="fas fa-sign-out-alt mr-1"></i> Sair</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-8 px-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-slate-800">Leads Capturados</h2>
+                <button onclick="carregarLeads()" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded transition">
+                    <i class="fas fa-sync-alt mr-1"></i> Atualizar
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
+                            <th class="p-4 border-b">ID</th>
+                            <th class="p-4 border-b">Data</th>
+                            <th class="p-4 border-b">Empresa</th>
+                            <th class="p-4 border-b">Contato</th>
+                            <th class="p-4 border-b text-center">Irregularidades (NR1)</th>
+                            <th class="p-4 border-b">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsTable" class="divide-y divide-slate-100">
+                        <tr><td colspan="6" class="p-8 text-center text-slate-400">Carregando leads...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Detalhes -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
+                <h3 class="text-xl font-bold text-slate-800" id="modalTitle">Detalhes do CheckUP</h3>
+                <button onclick="fecharModal()" class="text-slate-400 hover:text-red-500 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto" id="modalContent">
+                <!-- Conteúdo gerado via JS -->
+            </div>
+            <div class="p-6 border-t bg-slate-50 rounded-b-xl flex justify-end">
+                <button onclick="fecharModal()" class="bg-slate-800 text-white px-6 py-2 rounded-lg hover:bg-slate-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Trava de segurança simples por senha
+        if (sessionStorage.getItem('auth_admin') !== 'wilsonneto') {
+            const senha = prompt("Acesso Restrito. Digite a senha:");
+            if (senha === "wilsonneto") {
+                sessionStorage.setItem('auth_admin', 'wilsonneto');
+                document.getElementById('body-content').classList.remove('hidden');
+                carregarLeads();
+            } else {
+                alert("Acesso negado.");
+                window.location.href = "/";
+            }
+        } else {
+            document.getElementById('body-content').classList.remove('hidden');
+            carregarLeads();
+        }
+
+        function sair() {
+            sessionStorage.removeItem('auth_admin');
+            window.location.href = "/";
+        }
+
+        let leadsAtuais = [];
+
+        async function carregarLeads() {
+            try {
+                const response = await fetch('/api/leads');
+                const leads = await response.json();
+                leadsAtuais = leads;
+                
+                const tbody = document.getElementById('leadsTable');
+                tbody.innerHTML = '';
+
+                if (leads.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500">Nenhum checkup recebido ainda.</td></tr>';
+                    return;
+                }
+
+                leads.forEach(lead => {
+                    const data = new Date(lead.data_criacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+                    
+                    // Conta quantas respostas foram "Não" (indicando problema)
+                    let problemas = 0;
+                    Object.values(lead.respostas).forEach(resp => {
+                        if (resp === 'Não') problemas++;
+                    });
+
+                    let badgeColor = problemas === 0 ? 'bg-green-100 text-green-700' : (problemas < 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700');
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-4 text-slate-500">#${lead.id}</td>
+                        <td class="p-4 text-sm">${data}</td>
+                        <td class="p-4 font-semibold text-slate-800">${lead.empresa}</td>
+                        <td class="p-4">
+                            <div class="text-sm font-medium">${lead.nome}</div>
+                            <div class="text-sm text-slate-500"><i class="fab fa-whatsapp text-green-500"></i> ${lead.telefone}</div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${badgeColor}">${problemas} Não conformidades</span>
+                        </td>
+                        <td class="p-4">
+                            <button onclick="abrirModal(${lead.id})" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded text-sm font-medium transition">Ver Respostas</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar leads", error);
+            }
+        }
+
+        function abrirModal(id) {
+            const lead = leadsAtuais.find(l => l.id === id);
+            if (!lead) return;
+
+            document.getElementById('modalTitle').innerText = `CheckUP: ${lead.empresa}`;
+            
+            let html = `<div class="mb-6 grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
+                <div><span class="text-xs text-slate-500 block uppercase">Contato</span><span class="font-bold">${lead.nome}</span></div>
+                <div><span class="text-xs text-slate-500 block uppercase">WhatsApp</span><span class="font-bold">${lead.telefone}</span></div>
+            </div>`;
+
+            html += `<h4 class="font-bold text-slate-700 mb-3 border-b pb-2">Questionário Respondido</h4><ul class="space-y-3">`;
+            
+            for (const [pergunta, resposta] of Object.entries(lead.respostas)) {
+                let corTexto = resposta === 'Sim' ? 'text-green-600 font-bold' : (resposta === 'Não' ? 'text-red-600 font-bold' : 'text-slate-500');
+                let icone = resposta === 'Sim' ? 'fa-check-circle' : (resposta === 'Não' ? 'fa-times-circle' : 'fa-minus-circle');
+                
+                let lbl = pergunta.toUpperCase().replace('_', ' ');
+
+                html += `
+                    <li class="bg-slate-50 p-3 rounded border border-slate-100 flex justify-between items-center gap-4">
+                        <span class="text-sm text-slate-600 flex-1">${lbl}</span>
+                        <span class="${corTexto} flex items-center gap-1 min-w-[80px] justify-end"><i class="fas ${icone}"></i> ${resposta}</span>
+                    </li>
+                `;
+            }
+            html += `</ul>`;
+
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function fecharModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
