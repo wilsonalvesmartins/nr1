@@ -1,0 +1,13 @@
+{
+  "name": "checkup-nr1",
+  "version": "1.0.0",
+  "description": "App de CheckUP NR1 com Painel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6"
+  }
+}
